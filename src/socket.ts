@@ -14,7 +14,7 @@ import { Game } from "model/Game";
 
 /*TODO 
  sendAnswer listener:
-  - show correct answer & send next question when both answered
+  - show correct answer
   - send feedback to otherPlayer
   - time logic
  exitQuizOrWaitingList:
@@ -144,6 +144,7 @@ async function joinQuiz(
         player1: socketInfo.userData,
         player2: waitingPlayerSocketInfo.userData,
         quizName: quiz.name,
+        numberOfQuestions: quiz.questions.length,
       });
 
       const game = new Game(
@@ -188,16 +189,38 @@ async function sendAnswer(
 
     game.answerQuestion(socketInfo.userData.userId, validatedId);
 
-    if (game.isSendNextQuestion()) {
-      const question = game.getQuestion();
-      if (question) {
-        io.to(socketInfo.joinedRoom).emit("sendQuestion", question);
-      } else {
-        io.to(socketInfo.joinedRoom).emit("gameFinished", game.getWinner());
-      }
+    if (!game.isSendNextQuestion()) {
+      await saveGame(game, socketInfo.joinedRoom);
+      return;
     }
 
-    await saveGame(game, socketInfo.joinedRoom);
+    const question = game.getQuestion();
+    if (question) {
+      io.to(socketInfo.joinedRoom).emit("sendQuestion", question);
+      await saveGame(game, socketInfo.joinedRoom);
+      return;
+    }
+
+    io.to(socketInfo.joinedRoom).emit(
+      "gameFinished",
+      game.getFinishedGameResults()
+    );
+
+    const room = io.sockets.adapter.rooms.get(socketInfo.joinedRoom);
+
+    if (!room) {
+      throw new Error("invalid room");
+    }
+
+    for (let socketId of room) {
+      const socketInRoomInfo = await getSocketInfoOrThrow(socketId);
+      await setSocketInfo(socketId, { ...socketInRoomInfo, joinedRoom: null });
+    }
+
+    io.sockets.adapter.rooms.delete(socketInfo.joinedRoom);
+    await redis.del(socketInfo.joinedRoom);
+
+    await dao.createResults(game.getCreateResultsDto());
   } catch (error) {
     console.log(error);
     socket.disconnect();

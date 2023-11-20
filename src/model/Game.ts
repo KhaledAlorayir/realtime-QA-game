@@ -1,4 +1,5 @@
 import {
+  CreateResult,
   GameFinishedBody,
   QuestionWithAnswers,
   SendQuestionBody,
@@ -87,7 +88,7 @@ export class Game {
     );
   }
 
-  getWinner(): GameFinishedBody {
+  getFinishedGameResults(): GameFinishedBody {
     if (!!this.currentQuestion) {
       throw new Error("game hasn't finished");
     }
@@ -103,6 +104,27 @@ export class Game {
       player1: this.player1,
       player2: this.player2,
       winnerId,
+    };
+  }
+
+  getCreateResultsDto(): CreateResult[] {
+    const results = this.getFinishedGameResults();
+    return [
+      this.mapToCreateResult(this.player1, results.winnerId),
+      this.mapToCreateResult(this.player2, results.winnerId),
+    ];
+  }
+
+  private mapToCreateResult(
+    userScore: UserScore,
+    winnerId: string | null
+  ): CreateResult {
+    return {
+      quizId: this.quizId,
+      userId: userScore.userId,
+      score: userScore.score,
+      status:
+        winnerId === userScore.userId ? "win" : !!winnerId ? "lose" : "draw",
     };
   }
 

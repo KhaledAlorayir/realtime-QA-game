@@ -5,11 +5,13 @@ import {
   categories,
   questions,
   quizzes,
+  results,
 } from "../connections/database/schema";
 import {
   Category,
   CreateCategory,
   CreateQuizWithQuestionsAndAnswers,
+  CreateResult,
   PaginatedResponse,
   Quiz,
 } from "./types";
@@ -72,6 +74,10 @@ class Dao {
 
   async quizExistsById(quizId: string) {
     return this.existsById(quizzes, quizId);
+  }
+
+  async createResults(createResults: CreateResult[]) {
+    await db.insert(results).values(createResults);
   }
 
   @cache()

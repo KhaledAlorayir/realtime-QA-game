@@ -1,6 +1,9 @@
 import { relations } from "drizzle-orm";
 import {
   boolean,
+  index,
+  integer,
+  pgEnum,
   pgTable,
   timestamp,
   uuid,
@@ -32,6 +35,7 @@ export const quizzesRelations = relations(quizzes, ({ many, one }) => ({
     references: [categories.id],
   }),
   questions: many(questions),
+  results: many(results),
 }));
 
 export const questions = pgTable("questions", {
@@ -65,5 +69,35 @@ export const answersRelations = relations(answers, ({ one }) => ({
   question: one(questions, {
     fields: [answers.questionId],
     references: [questions.id],
+  }),
+}));
+
+export const resultStatusEnum = pgEnum("result_status", [
+  "win",
+  "lose",
+  "draw",
+]);
+
+export const results = pgTable(
+  "results",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    quizId: uuid("quiz_id")
+      .references(() => quizzes.id)
+      .notNull(),
+    userId: uuid("user_id").notNull(),
+    score: integer("score").notNull(),
+    status: resultStatusEnum("result_status").notNull(),
+  },
+  (table) => ({
+    userIdx: index("userIdx").on(table.userId),
+  })
+);
+
+export const resultsRelations = relations(results, ({ one }) => ({
+  quiz: one(quizzes, {
+    fields: [results.quizId],
+    references: [quizzes.id],
   }),
 }));

@@ -1,7 +1,13 @@
-import { categories, questions, quizzes } from "../connections/database/schema";
+import {
+  categories,
+  questions,
+  quizzes,
+  results,
+} from "../connections/database/schema";
 
 export type CreateCategory = typeof categories.$inferInsert;
 export type Category = typeof categories.$inferSelect;
+export type CreateResult = typeof results.$inferInsert;
 
 export interface CreateQuizWithQuestionsAndAnswers {
   categoryId: string;
@@ -38,6 +44,7 @@ interface QuizJoinedBody {
   player1: UserData;
   player2: UserData;
   quizName: string;
+  numberOfQuestions: number;
 }
 
 export interface GameFinishedBody {
