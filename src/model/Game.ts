@@ -79,6 +79,16 @@ export class Game {
     }
 
     this.currentQuestion.playerAnswered[player.userId] = true;
+
+    const correctAnswerId = this.currentQuestion.question.answers.find(
+      (answer) => answer.isCorrect
+    )?.id;
+
+    if (!correctAnswerId) {
+      throw new Error("no correct answer found");
+    }
+
+    return correctAnswerId;
   }
 
   isSendNextQuestion() {

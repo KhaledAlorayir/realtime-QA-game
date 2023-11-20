@@ -14,8 +14,6 @@ import { Game } from "model/Game";
 
 /*TODO 
  sendAnswer listener:
-  - show correct answer
-  - send feedback to otherPlayer
   - time logic
  exitQuizOrWaitingList:
   - perform cleanup
@@ -187,12 +185,24 @@ async function sendAnswer(
 
     const game = await getGameOrThrow(socketInfo.joinedRoom);
 
-    game.answerQuestion(socketInfo.userData.userId, validatedId);
+    const correctAnswerId = game.answerQuestion(
+      socketInfo.userData.userId,
+      validatedId
+    );
+
+    io.to(socketInfo.joinedRoom).emit("sendPlayerAnswer", {
+      answerId: validatedId,
+      playerId: socketInfo.userData.userId,
+    });
 
     if (!game.isSendNextQuestion()) {
       await saveGame(game, socketInfo.joinedRoom);
       return;
     }
+
+    io.to(socketInfo.joinedRoom).emit("sendCorrectAnswer", {
+      answerId: correctAnswerId,
+    });
 
     const question = game.getQuestion();
     if (question) {
@@ -215,9 +225,9 @@ async function sendAnswer(
     for (let socketId of room) {
       const socketInRoomInfo = await getSocketInfoOrThrow(socketId);
       await setSocketInfo(socketId, { ...socketInRoomInfo, joinedRoom: null });
+      await io.sockets.sockets.get(socketId)?.leave(socketInfo.joinedRoom);
     }
 
-    io.sockets.adapter.rooms.delete(socketInfo.joinedRoom);
     await redis.del(socketInfo.joinedRoom);
 
     await dao.createResults(game.getCreateResultsDto());

@@ -53,10 +53,21 @@ export interface GameFinishedBody {
   player2: UserScore;
 }
 
+export interface SendPlayerAnswerBody {
+  playerId: string;
+  answerId: string;
+}
+
+export interface SendCorrectAnswerBody {
+  answerId: string;
+}
+
 export interface ServerToClientEvents {
   quizJoined: (body: QuizJoinedBody) => void;
   sendQuestion: (body: SendQuestionBody) => void;
   gameFinished: (body: GameFinishedBody) => void;
+  sendPlayerAnswer: (body: SendPlayerAnswerBody) => void;
+  sendCorrectAnswer: (body: SendCorrectAnswerBody) => void;
 }
 
 export interface ClientToServerEvents {
