@@ -36,4 +36,14 @@ export const PaginationRequestSchema = z.object({
   pageSize: z.string().pipe(z.coerce.number().nonnegative()).default("10"),
 });
 
+export const SearchRequestSchema = z.object({
+  q: z.string().trim().max(255).default(""),
+});
+
+export const PaginationAndSearchRequestSchema =
+  PaginationRequestSchema.merge(SearchRequestSchema);
+
 export type PaginationRequest = z.infer<typeof PaginationRequestSchema>;
+export type PaginationAndSearchRequest = z.infer<
+  typeof PaginationAndSearchRequestSchema
+>;

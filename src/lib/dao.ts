@@ -1,4 +1,4 @@
-import { SQL, and, asc, desc, eq, sql } from "drizzle-orm";
+import { SQL, and, asc, desc, eq, ilike, like, sql } from "drizzle-orm";
 import { db } from "../connections/database/db";
 import {
   answers,
@@ -15,7 +15,7 @@ import {
   PaginatedResponse,
   Quiz,
 } from "./types";
-import { PaginationRequest } from "./schema";
+import { PaginationAndSearchRequest, PaginationRequest } from "./schema";
 import { PgTableWithColumns } from "drizzle-orm/pg-core";
 import { KEY_GENERATOR } from "./const";
 import { redis } from "connections/redis";
@@ -58,13 +58,32 @@ class Dao {
 
   async getQuizzesByCategoryId(
     categoryId: string,
-    paginationRequest: PaginationRequest
+    { page, pageSize, q }: PaginationAndSearchRequest
   ): Promise<PaginatedResponse<Quiz>> {
     return this.paginate(
       quizzes,
-      and(eq(quizzes.categoryId, categoryId)),
+      and(eq(quizzes.categoryId, categoryId), ilike(quizzes.name, `%${q}%`)),
       desc(quizzes.createdAt),
-      paginationRequest
+      {
+        page,
+        pageSize,
+      }
+    );
+  }
+
+  async getQuizzes({
+    page,
+    pageSize,
+    q,
+  }: PaginationAndSearchRequest): Promise<PaginatedResponse<Quiz>> {
+    return this.paginate(
+      quizzes,
+      and(ilike(quizzes.name, `%${q}%`)),
+      desc(quizzes.createdAt),
+      {
+        page,
+        pageSize,
+      }
     );
   }
 

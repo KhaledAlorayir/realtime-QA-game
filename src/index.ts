@@ -8,6 +8,7 @@ import { ZodError } from "zod";
 import { Server } from "socket.io";
 import { ClientToServerEvents, ServerToClientEvents } from "./lib/types";
 import { webSocketHandler } from "./socket";
+import { quizzes } from "controller/quizzesController";
 
 const app = new Hono().basePath("/api");
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(
@@ -16,6 +17,7 @@ const io = new Server<ClientToServerEvents, ServerToClientEvents>(
 );
 
 app.route("/categories", categories);
+app.route("/quizzes", quizzes);
 
 app.onError((error, ctx) => {
   if (error instanceof ZodError) {

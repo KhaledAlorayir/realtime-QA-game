@@ -19,6 +19,9 @@ import { Game } from "model/Game";
   - perform cleanup
  cleanup:
   - leaving in the middle of a game, feedback to other player, cleanup cache
+
+  others:
+  - user stats endpoint
 */
 export async function webSocketHandler(
   io: Server<ClientToServerEvents, ServerToClientEvents, DefaultEventsMap, any>

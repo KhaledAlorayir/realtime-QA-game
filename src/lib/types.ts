@@ -95,5 +95,3 @@ export interface UserScore {
 export interface QuestionWithAnswers extends SendQuestionBody {
   answers: AnswerDto[];
 }
-
-//turn into class

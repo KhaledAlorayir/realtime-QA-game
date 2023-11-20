@@ -1,7 +1,12 @@
 import { Hono } from "hono";
 import { dao } from "../lib/dao";
 import { zValidator } from "@hono/zod-validator";
-import { GetQuizzesParamsSchema, PaginationRequestSchema } from "../lib/schema";
+import {
+  GetQuizzesParamsSchema,
+  PaginationAndSearchRequestSchema,
+  PaginationRequestSchema,
+  SearchRequestSchema,
+} from "../lib/schema";
 import { validatorHook } from "../lib/util";
 
 export const categories = new Hono();
@@ -18,7 +23,7 @@ categories.get(
 categories.get(
   "/:categoryId/quizzes",
   zValidator("param", GetQuizzesParamsSchema, validatorHook),
-  zValidator("query", PaginationRequestSchema, validatorHook),
+  zValidator("query", PaginationAndSearchRequestSchema, validatorHook),
   async (ctx) => {
     const quizzes = await dao.getQuizzesByCategoryId(
       ctx.req.valid("param").categoryId,
