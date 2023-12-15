@@ -35,7 +35,7 @@ export const quizzesRelations = relations(quizzes, ({ many, one }) => ({
     references: [categories.id],
   }),
   questions: many(questions),
-  results: many(results),
+  games: many(games),
 }));
 
 export const questions = pgTable("questions", {
@@ -78,17 +78,33 @@ export const resultStatusEnum = pgEnum("result_status", [
   "draw",
 ]);
 
+export const games = pgTable("games", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  quizId: uuid("quiz_id")
+    .references(() => quizzes.id)
+    .notNull(),
+});
+
+export const gamesRelations = relations(games, ({ one, many }) => ({
+  quiz: one(quizzes, {
+    fields: [games.quizId],
+    references: [quizzes.id],
+  }),
+  results: many(results),
+}));
+
 export const results = pgTable(
   "results",
   {
     id: uuid("id").primaryKey().defaultRandom(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
-    quizId: uuid("quiz_id")
-      .references(() => quizzes.id)
-      .notNull(),
     userId: uuid("user_id").notNull(),
     score: integer("score").notNull(),
     status: resultStatusEnum("result_status").notNull(),
+    gameId: uuid("game_id")
+      .references(() => games.id)
+      .notNull(),
   },
   (table) => ({
     userIdx: index("userIdx").on(table.userId),
@@ -96,8 +112,8 @@ export const results = pgTable(
 );
 
 export const resultsRelations = relations(results, ({ one }) => ({
-  quiz: one(quizzes, {
-    fields: [results.quizId],
-    references: [quizzes.id],
+  quiz: one(games, {
+    fields: [results.gameId],
+    references: [games.id],
   }),
 }));

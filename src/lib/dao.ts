@@ -3,6 +3,7 @@ import { db } from "../connections/database/db";
 import {
   answers,
   categories,
+  games,
   questions,
   quizzes,
   results,
@@ -10,8 +11,8 @@ import {
 import {
   Category,
   CreateCategory,
+  CreateGameAndResults,
   CreateQuizWithQuestionsAndAnswers,
-  CreateResult,
   PaginatedResponse,
   Quiz,
 } from "./types";
@@ -39,9 +40,12 @@ class Dao {
         .insert(questions)
         .values({ content: q.content, quizId: createdQuiz.id })
         .returning();
-      for (let a of q.answers) {
-        await db.insert(answers).values({ ...a, questionId: question.id });
-      }
+
+      await db
+        .insert(answers)
+        .values(
+          q.answers.map((answer) => ({ ...answer, questionId: question.id }))
+        );
     }
   }
 
@@ -95,8 +99,18 @@ class Dao {
     return this.existsById(quizzes, quizId);
   }
 
-  async createResults(createResults: CreateResult[]) {
-    await db.insert(results).values(createResults);
+  async createGameAndResults(createGameAndResults: CreateGameAndResults) {
+    const [game] = await db
+      .insert(games)
+      .values({ quizId: createGameAndResults.quizId })
+      .returning();
+
+    await db.insert(results).values(
+      createGameAndResults.results.map((result) => ({
+        ...result,
+        gameId: game.id,
+      }))
+    );
   }
 
   @cache()

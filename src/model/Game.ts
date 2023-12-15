@@ -1,5 +1,5 @@
 import {
-  CreateResult,
+  CreateGameAndResults,
   GameFinishedBody,
   QuestionWithAnswers,
   SendQuestionBody,
@@ -117,20 +117,22 @@ export class Game {
     };
   }
 
-  getCreateResultsDto(): CreateResult[] {
+  getCreateGameAndResultsDto(): CreateGameAndResults {
     const results = this.getFinishedGameResults();
-    return [
-      this.mapToCreateResult(this.player1, results.winnerId),
-      this.mapToCreateResult(this.player2, results.winnerId),
-    ];
+    return {
+      quizId: this.quizId,
+      results: [
+        this.mapToCreateResult(this.player1, results.winnerId),
+        this.mapToCreateResult(this.player2, results.winnerId),
+      ],
+    };
   }
 
   private mapToCreateResult(
     userScore: UserScore,
     winnerId: string | null
-  ): CreateResult {
+  ): CreateGameAndResults["results"][number] {
     return {
-      quizId: this.quizId,
       userId: userScore.userId,
       score: userScore.score,
       status:

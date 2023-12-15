@@ -38,6 +38,10 @@ export async function webSocketHandler(
         sendAnswer(socket, io, body.answerId);
       });
 
+      socket.on("leaveWaitingList", () => {
+        leaveWaitingList(socket, io);
+      });
+
       socket.on("disconnect", () => {
         cleanup(socket);
       });
@@ -233,10 +237,31 @@ async function sendAnswer(
 
     await redis.del(socketInfo.joinedRoom);
 
-    await dao.createResults(game.getCreateResultsDto());
+    await dao.createGameAndResults(game.getCreateGameAndResultsDto());
   } catch (error) {
     console.log(error);
     socket.disconnect();
+  }
+}
+
+async function leaveWaitingList(
+  socket: Socket<
+    ClientToServerEvents,
+    ServerToClientEvents,
+    DefaultEventsMap,
+    any
+  >,
+  io: Server<ClientToServerEvents, ServerToClientEvents, DefaultEventsMap, any>
+) {
+  try {
+    const socketInfo = await getSocketInfoOrThrow(socket.id);
+
+    if (!socketInfo.waitingOnQuizId) {
+      throw new Error("not in waiting list");
+    }
+    await removeSocketFromWaitingList(socket.id, socketInfo.waitingOnQuizId);
+  } catch (error) {
+    console.log(error);
   }
 }
 
@@ -254,10 +279,9 @@ async function cleanup(
       await redis.del(KEY_GENERATOR.activeUser(socketInfo.userData.userId));
       await redis.del(KEY_GENERATOR.socketInfo(socket.id));
       if (socketInfo.waitingOnQuizId) {
-        await redis.lRem(
-          KEY_GENERATOR.waitingPlayersList(socketInfo.waitingOnQuizId),
-          0,
-          socket.id
+        await removeSocketFromWaitingList(
+          socket.id,
+          socketInfo.waitingOnQuizId
         );
       }
     }
@@ -301,4 +325,8 @@ async function getGameOrThrow(roomId: string) {
 
 async function saveGame(game: Game, roomId: string) {
   await redis.set(roomId, game.toString());
+}
+
+function removeSocketFromWaitingList(socketId: string, quizId: string) {
+  return redis.lRem(KEY_GENERATOR.waitingPlayersList(quizId), 0, socketId);
 }

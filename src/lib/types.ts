@@ -1,13 +1,8 @@
-import {
-  categories,
-  questions,
-  quizzes,
-  results,
-} from "../connections/database/schema";
+import { categories, quizzes, results } from "../connections/database/schema";
 
 export type CreateCategory = typeof categories.$inferInsert;
 export type Category = typeof categories.$inferSelect;
-export type CreateResult = typeof results.$inferInsert;
+export type ResultStatus = typeof results.$inferInsert.status;
 
 export interface CreateQuizWithQuestionsAndAnswers {
   categoryId: string;
@@ -18,6 +13,15 @@ export interface CreateQuizWithQuestionsAndAnswers {
       content: string;
       isCorrect: boolean;
     }[];
+  }[];
+}
+
+export interface CreateGameAndResults {
+  quizId: string;
+  results: {
+    userId: string;
+    score: number;
+    status: ResultStatus;
   }[];
 }
 
@@ -73,6 +77,7 @@ export interface ServerToClientEvents {
 export interface ClientToServerEvents {
   joinQuiz: (body: { quizId: string }) => void;
   sendAnswer: (body: { answerId: string }) => void;
+  leaveWaitingList: () => void;
 }
 
 export interface UserData {

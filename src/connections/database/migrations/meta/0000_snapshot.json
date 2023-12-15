@@ -1,7 +1,7 @@
 {
   "version": "5",
   "dialect": "pg",
-  "id": "82d8d6af-06d0-46d0-9e40-deee9ddb5b44",
+  "id": "309b8a8d-fae1-4e21-a068-3448878dc68a",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "answers": {
@@ -97,6 +97,50 @@
           ]
         }
       }
+    },
+    "games": {
+      "name": "games",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "uuid",
+          "primaryKey": true,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "quiz_id": {
+          "name": "quiz_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "games_quiz_id_quizzes_id_fk": {
+          "name": "games_quiz_id_quizzes_id_fk",
+          "tableFrom": "games",
+          "tableTo": "quizzes",
+          "columnsFrom": [
+            "quiz_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {}
     },
     "questions": {
       "name": "questions",
@@ -216,12 +260,6 @@
           "notNull": true,
           "default": "now()"
         },
-        "quiz_id": {
-          "name": "quiz_id",
-          "type": "uuid",
-          "primaryKey": false,
-          "notNull": true
-        },
         "user_id": {
           "name": "user_id",
           "type": "uuid",
@@ -239,6 +277,12 @@
           "type": "result_status",
           "primaryKey": false,
           "notNull": true
+        },
+        "game_id": {
+          "name": "game_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
         }
       },
       "indexes": {
@@ -251,12 +295,12 @@
         }
       },
       "foreignKeys": {
-        "results_quiz_id_quizzes_id_fk": {
-          "name": "results_quiz_id_quizzes_id_fk",
+        "results_game_id_games_id_fk": {
+          "name": "results_game_id_games_id_fk",
           "tableFrom": "results",
-          "tableTo": "quizzes",
+          "tableTo": "games",
           "columnsFrom": [
-            "quiz_id"
+            "game_id"
           ],
           "columnsTo": [
             "id"
