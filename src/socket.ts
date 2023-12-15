@@ -13,13 +13,11 @@ import { dao } from "lib/dao";
 import { Game } from "model/Game";
 
 /*TODO 
+
+joinQuiz:
+- send there results over each other
  sendAnswer listener:
   - time logic
- exitQuizOrWaitingList:
-  - perform cleanup
- cleanup:
-  - leaving in the middle of a game, feedback to other player, cleanup cache
-
   others:
   - user stats endpoint
 */
@@ -43,7 +41,7 @@ export async function webSocketHandler(
       });
 
       socket.on("disconnect", () => {
-        cleanup(socket);
+        cleanup(socket, io);
       });
     } catch (error) {
       console.log(error);
@@ -271,7 +269,8 @@ async function cleanup(
     ServerToClientEvents,
     DefaultEventsMap,
     any
-  >
+  >,
+  io: Server<ClientToServerEvents, ServerToClientEvents, DefaultEventsMap, any>
 ) {
   try {
     const socketInfo = await getSocketInfo(socket.id);
@@ -283,6 +282,37 @@ async function cleanup(
           socket.id,
           socketInfo.waitingOnQuizId
         );
+      }
+
+      if (socketInfo.joinedRoom) {
+        const room = io.sockets.adapter.rooms.get(socketInfo.joinedRoom);
+
+        if (room) {
+          const [otherPlayerSocket] = Array.from(room.values());
+          if (otherPlayerSocket) {
+            io.to(otherPlayerSocket).emit("opponentLeftGame");
+
+            const game = await getGameOrThrow(socketInfo.joinedRoom);
+            const otherPlayerSocketInfo = await getSocketInfoOrThrow(
+              otherPlayerSocket
+            );
+            await io.sockets.sockets
+              .get(otherPlayerSocket)
+              ?.leave(socketInfo.joinedRoom);
+
+            await dao.createGameAndResults(
+              game.getCreateGameAndResultsDtoByWinnerId(
+                otherPlayerSocketInfo.userData.userId
+              )
+            );
+
+            await setSocketInfo(otherPlayerSocket, {
+              ...otherPlayerSocketInfo,
+              joinedRoom: null,
+            });
+          }
+        }
+        await redis.del(socketInfo.joinedRoom);
       }
     }
   } catch (error) {

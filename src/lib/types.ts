@@ -72,6 +72,7 @@ export interface ServerToClientEvents {
   gameFinished: (body: GameFinishedBody) => void;
   sendPlayerAnswer: (body: SendPlayerAnswerBody) => void;
   sendCorrectAnswer: (body: SendCorrectAnswerBody) => void;
+  opponentLeftGame: () => void;
 }
 
 export interface ClientToServerEvents {

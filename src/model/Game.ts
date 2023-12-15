@@ -128,6 +128,17 @@ export class Game {
     };
   }
 
+  getCreateGameAndResultsDtoByWinnerId(winnerId: string): CreateGameAndResults {
+    const winner = this.getPlayerOrThrow(winnerId);
+    return {
+      quizId: this.quizId,
+      results: [
+        this.mapToCreateResult(this.player1, winner.userId),
+        this.mapToCreateResult(this.player2, winner.userId),
+      ],
+    };
+  }
+
   private mapToCreateResult(
     userScore: UserScore,
     winnerId: string | null
