@@ -5,7 +5,10 @@ import {
   SendQuestionBody,
   UserScore,
 } from "lib/types";
-
+import dayjs from "dayjs";
+import { settings } from "lib/settings";
+import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
+dayjs.extend(isSameOrBefore);
 interface IGame {
   quizId: string;
   player1: UserScore;
@@ -14,6 +17,7 @@ interface IGame {
   currentQuestion: {
     question: QuestionWithAnswers;
     playerAnswered: Record<number, boolean>;
+    maxTimestampToAnswer: Date;
   } | null;
 }
 
@@ -25,6 +29,7 @@ export class Game {
   private currentQuestion: {
     question: QuestionWithAnswers;
     playerAnswered: Record<string, boolean>;
+    maxTimestampToAnswer: Date;
   } | null;
 
   constructor(
@@ -47,6 +52,9 @@ export class Game {
       this.currentQuestion = {
         question,
         playerAnswered: {},
+        maxTimestampToAnswer: dayjs()
+          .add(settings.SECONDS_ALLOWED_TO_ANSWER, "seconds")
+          .toDate(),
       };
       return this.mapQuestionDto(question);
     }
@@ -55,7 +63,7 @@ export class Game {
     return null;
   }
 
-  answerQuestion(playerId: string, answerId: string) {
+  answerQuestion(playerId: string, answerId: string | null) {
     const player = this.getPlayerOrThrow(playerId);
 
     if (!this.currentQuestion) {
@@ -66,16 +74,22 @@ export class Game {
       throw new Error("already answered");
     }
 
-    const answer = this.currentQuestion.question.answers.find(
-      ({ id }) => id === answerId
+    const isAnsweredInTime = dayjs().isSameOrBefore(
+      this.currentQuestion.maxTimestampToAnswer
     );
 
-    if (!answer) {
-      throw new Error("invalid answer id");
-    }
+    if (answerId) {
+      const answer = this.currentQuestion.question.answers.find(
+        ({ id }) => id === answerId
+      );
 
-    if (answer.isCorrect) {
-      player.score++;
+      if (!answer) {
+        throw new Error("invalid answer id");
+      }
+
+      if (answer.isCorrect && isAnsweredInTime) {
+        player.score++;
+      }
     }
 
     this.currentQuestion.playerAnswered[player.userId] = true;
@@ -88,7 +102,7 @@ export class Game {
       throw new Error("no correct answer found");
     }
 
-    return correctAnswerId;
+    return { correctAnswerId, isAnsweredInTime };
   }
 
   isSendNextQuestion() {

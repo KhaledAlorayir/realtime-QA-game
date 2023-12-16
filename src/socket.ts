@@ -13,11 +13,8 @@ import { dao } from "lib/dao";
 import { Game } from "model/Game";
 
 /*TODO 
-
-joinQuiz:
- sendAnswer listener:
-  - time logic
   others:
+  - seed quizzes from an external api
   - user stats endpoint
 */
 export async function webSocketHandler(
@@ -188,10 +185,10 @@ async function sendAnswer(
     any
   >,
   io: Server<ClientToServerEvents, ServerToClientEvents, DefaultEventsMap, any>,
-  answerId: string
+  answerId: string | null
 ) {
   try {
-    const validatedId = IdSchema.parse(answerId);
+    const validatedId = IdSchema.nullable().parse(answerId);
     const socketInfo = await getSocketInfoOrThrow(socket.id);
 
     if (!socketInfo.joinedRoom) {
@@ -200,15 +197,17 @@ async function sendAnswer(
 
     const game = await getGameOrThrow(socketInfo.joinedRoom);
 
-    const correctAnswerId = game.answerQuestion(
+    const { correctAnswerId, isAnsweredInTime } = game.answerQuestion(
       socketInfo.userData.userId,
       validatedId
     );
 
-    io.to(socketInfo.joinedRoom).emit("sendPlayerAnswer", {
-      answerId: validatedId,
-      playerId: socketInfo.userData.userId,
-    });
+    if (validatedId && isAnsweredInTime) {
+      io.to(socketInfo.joinedRoom).emit("sendPlayerAnswer", {
+        answerId: validatedId,
+        playerId: socketInfo.userData.userId,
+      });
+    }
 
     if (!game.isSendNextQuestion()) {
       await saveGame(game, socketInfo.joinedRoom);

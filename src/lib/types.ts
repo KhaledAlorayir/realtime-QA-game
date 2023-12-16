@@ -81,7 +81,7 @@ export interface ServerToClientEvents {
 
 export interface ClientToServerEvents {
   joinQuiz: (body: { quizId: string }) => void;
-  sendAnswer: (body: { answerId: string }) => void;
+  sendAnswer: (body: { answerId: string | null }) => void;
   leaveWaitingList: () => void;
 }
 
