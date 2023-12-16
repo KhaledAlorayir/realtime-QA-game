@@ -45,10 +45,14 @@ export interface SendQuestionBody {
 }
 
 interface QuizJoinedBody {
-  player1: UserData;
-  player2: UserData;
+  player1: UserData & WinCount;
+  player2: UserData & WinCount;
   quizName: string;
   numberOfQuestions: number;
+}
+
+interface WinCount {
+  wins: number | null;
 }
 
 export interface GameFinishedBody {

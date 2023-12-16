@@ -15,7 +15,6 @@ import { Game } from "model/Game";
 /*TODO 
 
 joinQuiz:
-- send there results over each other
  sendAnswer listener:
   - time logic
   others:
@@ -143,9 +142,20 @@ async function joinQuiz(
         throw new Error("invalid quiz id");
       }
 
+      const winsCount = await dao.getWinsCountBetweenTwoPlayers(
+        socketInfo.userData.userId,
+        waitingPlayerSocketInfo.userData.userId
+      );
+
       io.to(roomId).emit("quizJoined", {
-        player1: socketInfo.userData,
-        player2: waitingPlayerSocketInfo.userData,
+        player1: {
+          ...socketInfo.userData,
+          wins: winsCount?.player1Wins ?? null,
+        },
+        player2: {
+          ...waitingPlayerSocketInfo.userData,
+          wins: winsCount?.player2Wins ?? null,
+        },
         quizName: quiz.name,
         numberOfQuestions: quiz.questions.length,
       });

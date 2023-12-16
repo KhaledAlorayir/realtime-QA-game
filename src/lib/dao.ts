@@ -17,7 +17,7 @@ import {
   Quiz,
 } from "./types";
 import { PaginationAndSearchRequest, PaginationRequest } from "./schema";
-import { PgTableWithColumns } from "drizzle-orm/pg-core";
+import { PgTableWithColumns, alias } from "drizzle-orm/pg-core";
 import { KEY_GENERATOR } from "./const";
 import { redis } from "connections/redis";
 
@@ -141,6 +141,23 @@ class Dao {
       },
     });
   }
+
+  async getWinsCountBetweenTwoPlayers(player1Id: string, player2Id: string) {
+    const r1 = alias(results, "r1");
+    const r2 = alias(results, "r2");
+
+    const [data] = await db
+      .select({
+        player1Wins: sql<number>`COUNT(CASE WHEN r1.result_status = 'win' THEN 1 END)`,
+        player2Wins: sql<number>`COUNT(CASE WHEN r2.result_status = 'win' THEN 1 END)`,
+      })
+      .from(r1)
+      .innerJoin(r2, eq(r1.gameId, r2.gameId))
+      .where(and(eq(r1.userId, player1Id), eq(r2.userId, player2Id)));
+
+    return data ? data : null;
+  }
+
   //this can be enhanced by using dynamic queries
   //https://orm.drizzle.team/docs/dynamic-query-building
   //it will allow for pagiantion with anything including Joined Queries, for now this is fine for my use case
