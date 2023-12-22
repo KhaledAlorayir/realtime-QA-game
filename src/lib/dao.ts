@@ -18,7 +18,7 @@ import {
 } from "./types";
 import { PaginationAndSearchRequest, PaginationRequest } from "./schema";
 import { PgTableWithColumns, alias } from "drizzle-orm/pg-core";
-import { KEY_GENERATOR } from "./const";
+import { CATEGORY, KEY_GENERATOR } from "./const";
 import { redis } from "connections/redis";
 
 class Dao {
@@ -156,6 +156,15 @@ class Dao {
       .where(and(eq(r1.userId, player1Id), eq(r2.userId, player2Id)));
 
     return data ? data : null;
+  }
+
+  @cache(null)
+  async getCategoryByName(category: CATEGORY) {
+    const [results] = await db
+      .select()
+      .from(categories)
+      .where(eq(categories.name, category));
+    return results;
   }
 
   //this can be enhanced by using dynamic queries

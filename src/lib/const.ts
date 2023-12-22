@@ -10,3 +10,19 @@ export const KEY_GENERATOR = {
       .sort()
       .join("_")}`,
 };
+
+export enum CATEGORY {
+  MOVIES = "movies",
+  TV = "tv",
+  VIDEO_GAMES = "video games",
+  MUSIC = "music",
+  GENERAL_KNOWLEDGE = "general knowledge",
+  BOOKS = "books",
+  NATURE = "nature",
+  COMPUTERS = "computers",
+  SPORT = "sports",
+  GEOGRAPHY = "geography",
+  HISTORY = "history",
+  CELEBRITIES = "celebrities",
+  ANIMALS = "animals",
+}
