@@ -59,6 +59,42 @@ async function seedCategory() {
   }
 }
 
+async function things() {
+  const { id } = await dao.getCategoryByName(CATEGORY.MOVIES);
+
+  await dao.createQuizWithQuestionsAndAnswers({
+    quizName: "The Phantom Menace",
+    categoryId: id,
+    questions: [
+      {
+        content: `In "The Phantom Menace", Jar Jar is a Gungan.`,
+        answers: [
+          { content: "True", isCorrect: true },
+          { content: "False", isCorrect: false },
+        ],
+      },
+      {
+        content: `How many action sequences take place simultaneously towards the end of "The Phantom Menace"?`,
+        answers: [
+          { content: "1", isCorrect: false },
+          { content: "2", isCorrect: false },
+          { content: "4", isCorrect: true },
+          { content: "8", isCorrect: false },
+        ],
+      },
+      {
+        content: `How long did Padmé serve as queen?`,
+        answers: [
+          { content: "4 years", isCorrect: false },
+          { content: "8 years", isCorrect: true },
+          { content: "6 years", isCorrect: false },
+          { content: "1 years", isCorrect: false },
+        ],
+      },
+    ],
+  });
+}
+
 await seedMasterData();
 // await seedCategory();
 process.exit(0);

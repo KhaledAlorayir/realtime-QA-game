@@ -2,6 +2,7 @@ import {
   CreateGameAndResults,
   GameFinishedBody,
   QuestionWithAnswers,
+  SendCorrectAnswerBody,
   SendQuestionBody,
   UserScore,
 } from "lib/types";
@@ -9,15 +10,15 @@ import dayjs from "dayjs";
 import { settings } from "lib/settings";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
 dayjs.extend(isSameOrBefore);
-interface IGame {
+interface DeserializedGame {
   quizId: string;
   player1: UserScore;
   player2: UserScore;
   questions: QuestionWithAnswers[];
   currentQuestion: {
     question: QuestionWithAnswers;
-    playerAnswered: Record<number, boolean>;
-    maxTimestampToAnswer: Date;
+    playerAnswer: [string, string | null][];
+    maxTimestampToAnswer: string;
   } | null;
 }
 
@@ -28,7 +29,7 @@ export class Game {
   private questions: QuestionWithAnswers[];
   private currentQuestion: {
     question: QuestionWithAnswers;
-    playerAnswered: Record<string, boolean>;
+    playerAnswer: Map<string, string | null>;
     maxTimestampToAnswer: Date;
   } | null;
 
@@ -51,7 +52,7 @@ export class Game {
     if (question) {
       this.currentQuestion = {
         question,
-        playerAnswered: {},
+        playerAnswer: new Map(),
         maxTimestampToAnswer: dayjs()
           .add(settings.SECONDS_ALLOWED_TO_ANSWER, "seconds")
           .toDate(),
@@ -70,7 +71,7 @@ export class Game {
       throw new Error("no current question");
     }
 
-    if (this.currentQuestion.playerAnswered[player.userId]) {
+    if (this.currentQuestion.playerAnswer.has(player.userId)) {
       throw new Error("already answered");
     }
 
@@ -92,7 +93,7 @@ export class Game {
       }
     }
 
-    this.currentQuestion.playerAnswered[player.userId] = true;
+    this.currentQuestion.playerAnswer.set(player.userId, answerId);
 
     const correctAnswerId = this.currentQuestion.question.answers.find(
       (answer) => answer.isCorrect
@@ -105,10 +106,10 @@ export class Game {
     return { correctAnswerId, isAnsweredInTime };
   }
 
-  isSendNextQuestion() {
+  isBothPlayersAnswered() {
     return !!(
-      this.currentQuestion?.playerAnswered[this.player1.userId] &&
-      this.currentQuestion?.playerAnswered[this.player2.userId]
+      this.currentQuestion?.playerAnswer.has(this.player1.userId) &&
+      this.currentQuestion?.playerAnswer.has(this.player2.userId)
     );
   }
 
@@ -153,6 +154,25 @@ export class Game {
     };
   }
 
+  getCurrentScore(): Omit<SendCorrectAnswerBody, "correctAnswerId"> {
+    if (!this.isBothPlayersAnswered() || !this.currentQuestion) {
+      throw new Error("both players must answer");
+    }
+
+    return {
+      player1: {
+        ...this.player1,
+        answerId:
+          this.currentQuestion.playerAnswer.get(this.player1.userId) ?? null,
+      },
+      player2: {
+        ...this.player2,
+        answerId:
+          this.currentQuestion.playerAnswer.get(this.player2.userId) ?? null,
+      },
+    };
+  }
+
   private mapToCreateResult(
     userScore: UserScore,
     winnerId: string | null
@@ -188,12 +208,17 @@ export class Game {
       player1: this.player1,
       player2: this.player2,
       questions: this.questions,
-      currentQuestion: this.currentQuestion,
+      currentQuestion: !this.currentQuestion
+        ? null
+        : {
+            ...this.currentQuestion,
+            playerAnswer: Array.from(this.currentQuestion.playerAnswer),
+          },
     });
   }
 
   static parse(json: string) {
-    const parsedJson = JSON.parse(json) as IGame;
+    const parsedJson = JSON.parse(json) as DeserializedGame;
     const game = new Game(
       parsedJson.quizId,
       parsedJson.player1.userId,
@@ -202,7 +227,15 @@ export class Game {
     );
     game.player1.score = parsedJson.player1.score;
     game.player2.score = parsedJson.player2.score;
-    game.currentQuestion = parsedJson.currentQuestion;
+    game.currentQuestion = !parsedJson.currentQuestion
+      ? null
+      : {
+          maxTimestampToAnswer: dayjs(
+            parsedJson.currentQuestion.maxTimestampToAnswer
+          ).toDate(),
+          question: parsedJson.currentQuestion.question,
+          playerAnswer: new Map(parsedJson.currentQuestion.playerAnswer),
+        };
     return game;
   }
 }

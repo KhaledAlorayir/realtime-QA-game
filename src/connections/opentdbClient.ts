@@ -48,7 +48,7 @@ async function getTrivia(request: ApiRequest) {
 
     if (!results.ok) {
       console.log(results);
-      throw Error("ops");
+      throw new Error("ops");
     }
 
     return (await results.json()) as ApiResponse;

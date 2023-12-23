@@ -61,20 +61,21 @@ export interface GameFinishedBody {
   player2: UserScore;
 }
 
-export interface SendPlayerAnswerBody {
+export interface PlayerAnsweredBody {
   playerId: string;
-  answerId: string;
 }
 
 export interface SendCorrectAnswerBody {
-  answerId: string;
+  correctAnswerId: string;
+  player1: UserScoreAndAnswer;
+  player2: UserScoreAndAnswer;
 }
 
 export interface ServerToClientEvents {
   quizJoined: (body: QuizJoinedBody) => void;
   sendQuestion: (body: SendQuestionBody) => void;
   gameFinished: (body: GameFinishedBody) => void;
-  sendPlayerAnswer: (body: SendPlayerAnswerBody) => void;
+  playerAnswered: (body: PlayerAnsweredBody) => void;
   sendCorrectAnswer: (body: SendCorrectAnswerBody) => void;
   opponentLeftGame: () => void;
 }
@@ -105,3 +106,5 @@ export interface UserScore {
 export interface QuestionWithAnswers extends SendQuestionBody {
   answers: AnswerDto[];
 }
+
+export type UserScoreAndAnswer = UserScore & { answerId: string | null };

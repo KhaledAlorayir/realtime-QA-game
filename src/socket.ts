@@ -14,8 +14,8 @@ import { Game } from "model/Game";
 
 /*TODO 
   others:
-  - seed quizzes from an external api
   - user stats endpoint
+  - refactor seed (sperate reset from seeding master data)
 */
 export async function webSocketHandler(
   io: Server<ClientToServerEvents, ServerToClientEvents, DefaultEventsMap, any>
@@ -202,20 +202,20 @@ async function sendAnswer(
       validatedId
     );
 
-    if (validatedId && isAnsweredInTime) {
-      io.to(socketInfo.joinedRoom).emit("sendPlayerAnswer", {
-        answerId: validatedId,
+    if (isAnsweredInTime && validatedId) {
+      io.to(socketInfo.joinedRoom).emit("playerAnswered", {
         playerId: socketInfo.userData.userId,
       });
     }
 
-    if (!game.isSendNextQuestion()) {
+    if (!game.isBothPlayersAnswered()) {
       await saveGame(game, socketInfo.joinedRoom);
       return;
     }
 
     io.to(socketInfo.joinedRoom).emit("sendCorrectAnswer", {
-      answerId: correctAnswerId,
+      correctAnswerId,
+      ...game.getCurrentScore(),
     });
 
     const question = game.getQuestion();
