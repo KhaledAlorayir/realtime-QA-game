@@ -5,7 +5,6 @@ import {
   GetQuizzesParamsSchema,
   PaginationAndSearchRequestSchema,
   PaginationRequestSchema,
-  SearchRequestSchema,
 } from "../lib/schema";
 import { validatorHook } from "../lib/util";
 
