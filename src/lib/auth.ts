@@ -1,7 +1,15 @@
-import { verify, jwt } from "hono/jwt";
+import { verify } from "hono/jwt";
 import { settings } from "./settings";
 import { UserData } from "./types";
-import { Context } from "hono";
+import { Context, Next } from "hono";
+import { HTTPException } from "hono/http-exception";
+import { createMiddleware } from "hono/factory";
+
+declare module "hono" {
+  interface ContextVariableMap {
+    authId: string;
+  }
+}
 
 interface DecodedToken {
   sub: string;
@@ -27,9 +35,16 @@ export async function getUserByToken(token: string): Promise<UserData> {
   };
 }
 
-export function getUserId(ctx: Context): string {
-  const payload = ctx.get("jwtPayload") as DecodedToken;
-  return payload.sub;
-}
-
-export const authenticated = jwt({ secret: settings.JWT_SECRET });
+export const auth = createMiddleware(async (ctx, next) => {
+  try {
+    const token = await ctx.req.header("Authorization")?.split("Bearer ")[1];
+    if (!token) {
+      throw new Error("no token provided");
+    }
+    const userInfo = await getUserByToken(token);
+    ctx.set("authId", userInfo.userId);
+    await next();
+  } catch (error) {
+    throw new HTTPException(401);
+  }
+});

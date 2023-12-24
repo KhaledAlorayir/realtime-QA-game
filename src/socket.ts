@@ -12,11 +12,6 @@ import { KEY_GENERATOR } from "./lib/const";
 import { dao } from "lib/dao";
 import { Game } from "model/Game";
 
-/*TODO 
-  others:
-  - user stats endpoint
-  - refactor seed (sperate reset from seeding master data)
-*/
 export async function webSocketHandler(
   io: Server<ClientToServerEvents, ServerToClientEvents, DefaultEventsMap, any>
 ) {

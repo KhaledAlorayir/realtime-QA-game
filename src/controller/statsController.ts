@@ -1,9 +1,9 @@
 import { Hono } from "hono";
-import { authenticated, getUserId } from "lib/auth";
+import { auth } from "lib/auth";
 
 export const stats = new Hono();
 
-stats.get("/", authenticated, (ctx) => {
-  const userId = getUserId(ctx);
+stats.get("/", auth, (ctx) => {
+  console.log(ctx.get("authId"));
   return ctx.json({ hello: "world" });
 });
