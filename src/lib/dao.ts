@@ -18,8 +18,8 @@ import {
 } from "./types";
 import { PaginationAndSearchRequest, PaginationRequest } from "./schema";
 import { PgTableWithColumns, alias } from "drizzle-orm/pg-core";
-import { CATEGORY, KEY_GENERATOR } from "./const";
-import { redis } from "connections/redis";
+import { CATEGORY } from "./const";
+import { cache } from "./util";
 
 class Dao {
   async createCategory(category: CreateCategory) {
@@ -148,8 +148,8 @@ class Dao {
 
     const [data] = await db
       .select({
-        player1Wins: sql<number>`COUNT(CASE WHEN r1.result_status = 'win' THEN 1 END)`,
-        player2Wins: sql<number>`COUNT(CASE WHEN r2.result_status = 'win' THEN 1 END)`,
+        player1Wins: sql<number>`cast(COUNT(CASE WHEN r1.result_status = 'win' THEN 1 END) as int)`,
+        player2Wins: sql<number>`cast(COUNT(CASE WHEN r2.result_status = 'win' THEN 1 END) as int)`,
       })
       .from(r1)
       .innerJoin(r2, eq(r1.gameId, r2.gameId))
@@ -167,6 +167,52 @@ class Dao {
     return results;
   }
 
+  async getResultCountsByUserId(userId: string) {
+    const [data] = await db
+      .select({
+        wins: sql<number>`cast(COUNT(CASE WHEN ${results.status} = 'win' THEN 1 END) as int)`,
+        loses: sql<number>`cast(COUNT(CASE WHEN ${results.status} = 'lose' THEN 1 END) as int)`,
+        draws: sql<number>`cast(COUNT(CASE WHEN ${results.status} = 'draw' THEN 1 END) as int)`,
+      })
+      .from(results)
+      .where(eq(results.userId, userId));
+    return data;
+  }
+
+  async getMostPlayedCategoriesByUserId(userId: string) {
+    const data = await db
+      .select({
+        gamesPlayed: sql<number>`cast(count(${results.id}) as int) as gamesPlayed`,
+        categoryName: categories.name,
+      })
+      .from(results)
+      .innerJoin(games, eq(games.id, results.gameId))
+      .innerJoin(quizzes, eq(quizzes.id, games.quizId))
+      .innerJoin(categories, eq(categories.id, quizzes.categoryId))
+      .where(eq(results.userId, userId))
+      .groupBy(categories.name)
+      .orderBy(sql`gamesPlayed desc`)
+      .limit(3);
+    return data;
+  }
+
+  async getCategoryWithMostWinsByUserId(userId: string) {
+    const [data] = await db
+      .select({
+        gamesWon: sql<number>`cast(count(CASE WHEN ${results.status} = 'win' THEN 1 END) as int) as gamesWon`,
+        categoryName: categories.name,
+      })
+      .from(results)
+      .innerJoin(games, eq(games.id, results.gameId))
+      .innerJoin(quizzes, eq(quizzes.id, games.quizId))
+      .innerJoin(categories, eq(categories.id, quizzes.categoryId))
+      .where(eq(results.userId, userId))
+      .groupBy(categories.name)
+      .orderBy(sql`gamesWon desc`)
+      .limit(1);
+    return data;
+  }
+
   //this can be enhanced by using dynamic queries
   //https://orm.drizzle.team/docs/dynamic-query-building
   //it will allow for pagiantion with anything including Joined Queries, for now this is fine for my use case
@@ -177,7 +223,7 @@ class Dao {
     paginationRequest: PaginationRequest
   ): Promise<PaginatedResponse<T>> {
     const [countData] = await db
-      .select({ count: sql<number>`count(*)` })
+      .select({ count: sql<number>`cast(count(*) as int)` })
       .from(table)
       .where(conditions);
 
@@ -210,49 +256,12 @@ class Dao {
 
   private async existsById(table: PgTableWithColumns<any>, id: string) {
     const [result] = await db
-      .select({ count: sql<number>`count(*)` })
+      .select({ count: sql<number>`cast(count(*) as int)` })
       .from(table)
       .where(eq(table.id, id));
 
-    return result.count > 0;
+    return !!result.count;
   }
 }
 
 export const dao = new Dao();
-
-function cache(
-  ttlOptions: { ttl: number; resetOnHit: boolean } | null = {
-    ttl: 3600,
-    resetOnHit: true,
-  }
-) {
-  return function (
-    target: any,
-    propertyKey: string,
-    descriptor: PropertyDescriptor
-  ) {
-    const originalMethod = descriptor.value;
-    descriptor.value = async function (...args: any[]) {
-      const key = KEY_GENERATOR.cacheKey(propertyKey, args);
-
-      const results = await redis.get(key);
-
-      if (!results) {
-        const data = await originalMethod.apply(this, args);
-        if (ttlOptions) {
-          await redis.setEx(key, ttlOptions.ttl, JSON.stringify(data));
-        } else {
-          await redis.set(key, JSON.stringify(data));
-        }
-        return data;
-      }
-
-      if (ttlOptions?.resetOnHit) {
-        await redis.expire(key, ttlOptions.ttl);
-      }
-      return JSON.parse(results);
-    };
-
-    return descriptor;
-  };
-}

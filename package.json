@@ -3,7 +3,9 @@
     "start": "tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
     "migrate": "drizzle-kit generate:pg",
-    "seed": "tsx src/connections/database/seed.ts",
+    "seed": "tsx src/scripts/seed.ts",
+    "reset": "tsx src/scripts/reset.ts",
+    "generate": "tsx src/scripts/generateQuizzes.ts",
     "push": "tsx src/connections/database/migrate.ts"
   },
   "dependencies": {
