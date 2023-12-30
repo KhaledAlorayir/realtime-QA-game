@@ -18,9 +18,10 @@ const io = new Server<ClientToServerEvents, ServerToClientEvents>(
   serve(app)
 );
 
-app.route("/categories", categories);
-app.route("/quizzes", quizzes);
-app.route("/stats", stats);
+const routes = app
+  .route("/stats", stats)
+  .route("/quizzes", quizzes)
+  .route("/categories", categories);
 
 app.onError((error, ctx) => {
   if (error instanceof ZodError) {
@@ -33,3 +34,4 @@ app.onError((error, ctx) => {
 });
 
 webSocketHandler(io);
+export type AppType = typeof routes;
