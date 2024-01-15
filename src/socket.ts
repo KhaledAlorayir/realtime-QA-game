@@ -11,6 +11,7 @@ import { redis } from "./connections/redis";
 import { KEY_GENERATOR } from "./lib/const";
 import { dao } from "lib/dao";
 import { Game } from "model/Game";
+import { ApiError } from "model/ApiError";
 
 export async function webSocketHandler(
   io: Server<ClientToServerEvents, ServerToClientEvents, DefaultEventsMap, any>
@@ -35,8 +36,7 @@ export async function webSocketHandler(
         cleanup(socket, io);
       });
     } catch (error) {
-      console.log(error);
-      socket.disconnect(true);
+      exceptionHandler(socket, error);
     }
   });
 }
@@ -49,8 +49,7 @@ async function authorize(
     any
   >
 ) {
-  const token = socket.handshake.headers.authorization;
-
+  const { token } = socket.handshake.auth;
   if (!token) {
     throw new Error("no token");
   }
@@ -159,7 +158,7 @@ async function joinQuiz(
         quiz.questions
       );
 
-      const question = game.getQuestion();
+      const question = game.getQuestion(true);
 
       if (question) {
         io.to(roomId).emit("sendQuestion", question);
@@ -168,7 +167,7 @@ async function joinQuiz(
       await saveGame(game, roomId);
     }
   } catch (error) {
-    socket.disconnect();
+    exceptionHandler(socket, error);
   }
 }
 
@@ -241,8 +240,7 @@ async function sendAnswer(
 
     await dao.createGameAndResults(game.getCreateGameAndResultsDto());
   } catch (error) {
-    console.log(error);
-    socket.disconnect();
+    exceptionHandler(socket, error);
   }
 }
 
@@ -263,7 +261,7 @@ async function leaveWaitingList(
     }
     await removeSocketFromWaitingList(socket.id, socketInfo.waitingOnQuizId);
   } catch (error) {
-    console.log(error);
+    exceptionHandler(socket, error);
   }
 }
 
@@ -320,7 +318,7 @@ async function cleanup(
       }
     }
   } catch (error) {
-    console.log(error);
+    exceptionHandler(socket, error);
   }
 }
 
@@ -363,4 +361,17 @@ async function saveGame(game: Game, roomId: string) {
 
 function removeSocketFromWaitingList(socketId: string, quizId: string) {
   return redis.lRem(KEY_GENERATOR.waitingPlayersList(quizId), 0, socketId);
+}
+
+function exceptionHandler(
+  socket: Socket<
+    ClientToServerEvents,
+    ServerToClientEvents,
+    DefaultEventsMap,
+    any
+  >,
+  error: unknown
+) {
+  socket.emit("sendError", ApiError.parseUnknownError(error));
+  socket.disconnect(true);
 }

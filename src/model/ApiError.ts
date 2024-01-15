@@ -20,4 +20,14 @@ export class ApiError {
     );
     return apiError;
   }
+
+  static parseUnknownError(unknownError: unknown) {
+    if (unknownError instanceof ZodError) {
+      return this.parseZodError(unknownError);
+    }
+    const apiError = new ApiError();
+    const error = unknownError as any;
+    apiError.setSingleError(error?.message ?? "an error has occurred");
+    return apiError;
+  }
 }

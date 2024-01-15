@@ -1,11 +1,10 @@
 import { zValidator } from "@hono/zod-validator";
 import { Hono } from "hono";
-import { PaginationAndSearchRequestSchema } from "lib/schema";
+import { PaginationAndSearchRequestSchema } from "../lib/schema";
 import { validatorHook } from "lib/util";
 import { dao } from "../lib/dao";
-import { cors } from "hono/cors";
 
-const hono = new Hono().use(cors());
+const hono = new Hono();
 
 export const quizzes = hono.get(
   "/",

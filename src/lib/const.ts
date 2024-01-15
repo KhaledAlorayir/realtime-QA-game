@@ -26,3 +26,5 @@ export enum CATEGORY {
   CELEBRITIES = "celebrities",
   ANIMALS = "animals",
 }
+
+export const INTRO_IN_SECONDS = 3;

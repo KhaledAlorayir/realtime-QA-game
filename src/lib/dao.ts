@@ -210,7 +210,7 @@ class Dao {
       .groupBy(categories.name)
       .orderBy(sql`gamesWon desc`)
       .limit(1);
-    return data;
+    return data ? data : null;
   }
 
   //this can be enhanced by using dynamic queries

@@ -7,9 +7,9 @@ import {
   PaginationRequestSchema,
 } from "../lib/schema";
 import { validatorHook } from "../lib/util";
-import { cors } from "hono/cors";
 
-const hono = new Hono().use(cors());
+const hono = new Hono();
+
 export const categories = hono
   .get(
     "/",

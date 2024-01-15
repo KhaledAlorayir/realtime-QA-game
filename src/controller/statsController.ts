@@ -1,9 +1,8 @@
 import { Hono } from "hono";
-import { cors } from "hono/cors";
-import { auth } from "lib/auth";
-import { dao } from "lib/dao";
+import { auth } from "../lib/auth";
+import { dao } from "../lib/dao";
 
-const hono = new Hono().use(cors());
+const hono = new Hono();
 
 export const stats = hono.get("/", auth, async (ctx) => {
   const resultsCount = await dao.getResultCountsByUserId(ctx.get("authId"));
@@ -14,7 +13,11 @@ export const stats = hono.get("/", auth, async (ctx) => {
     ctx.get("authId")
   );
   return ctx.json({
-    resultsCount,
+    resultsCount: Object.keys(resultsCount).map((key) => ({
+      label: key,
+      //@ts-ignore
+      value: resultsCount[key] as number,
+    })),
     mostPlayedCategories,
     categoryWithMostWins,
   });

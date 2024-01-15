@@ -37,7 +37,7 @@ export async function getUserByToken(token: string): Promise<UserData> {
 
 export const auth = createMiddleware(async (ctx, next) => {
   try {
-    const token = await ctx.req.header("Authorization")?.split("Bearer ")[1];
+    const token = ctx.req.header("Authorization")?.split("Bearer ")[1];
     if (!token) {
       throw new Error("no token provided");
     }

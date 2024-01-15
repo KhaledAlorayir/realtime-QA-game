@@ -1,3 +1,4 @@
+import { ApiError } from "model/ApiError";
 import { categories, quizzes, results } from "../connections/database/schema";
 
 export type CreateCategory = typeof categories.$inferInsert;
@@ -41,10 +42,11 @@ type AnswerDto = {
 export interface SendQuestionBody {
   id: string;
   content: string;
+  questionNumber: number;
   answers: Omit<AnswerDto, "isCorrect">[];
 }
 
-interface QuizJoinedBody {
+export interface QuizJoinedBody {
   player1: UserData & WinCount;
   player2: UserData & WinCount;
   quizName: string;
@@ -78,6 +80,7 @@ export interface ServerToClientEvents {
   playerAnswered: (body: PlayerAnsweredBody) => void;
   sendCorrectAnswer: (body: SendCorrectAnswerBody) => void;
   opponentLeftGame: () => void;
+  sendError: (apiError: ApiError) => void;
 }
 
 export interface ClientToServerEvents {
@@ -103,7 +106,9 @@ export interface UserScore {
   score: number;
 }
 
-export interface QuestionWithAnswers extends SendQuestionBody {
+export interface QuestionWithAnswers {
+  id: string;
+  content: string;
   answers: AnswerDto[];
 }
 

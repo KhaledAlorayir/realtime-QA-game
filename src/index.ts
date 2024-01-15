@@ -8,20 +8,22 @@ import { ZodError } from "zod";
 import { Server } from "socket.io";
 import { ClientToServerEvents, ServerToClientEvents } from "./lib/types";
 import { webSocketHandler } from "./socket";
-import { quizzes } from "controller/quizzesController";
-import { stats } from "controller/statsController";
+import { quizzes } from "./controller/quizzesController";
+import { stats } from "./controller/statsController";
 import { HTTPException } from "hono/http-exception";
+import { cors } from "hono/cors";
 
-const app = new Hono().basePath("/api");
+const app = new Hono().basePath("/api").use("*", cors());
 const io = new Server<ClientToServerEvents, ServerToClientEvents>(
   //@ts-ignore
-  serve(app)
+  serve(app),
+  { cors: { origin: "*" } }
 );
 
 const routes = app
   .route("/stats", stats)
-  .route("/quizzes", quizzes)
-  .route("/categories", categories);
+  .route("/categories", categories)
+  .route("/quizzes", quizzes);
 
 app.onError((error, ctx) => {
   if (error instanceof ZodError) {

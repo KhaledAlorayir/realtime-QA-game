@@ -9,6 +9,7 @@ import {
 import dayjs from "dayjs";
 import { settings } from "lib/settings";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
+import { INTRO_IN_SECONDS } from "lib/const";
 dayjs.extend(isSameOrBefore);
 interface DeserializedGame {
   quizId: string;
@@ -20,6 +21,7 @@ interface DeserializedGame {
     playerAnswer: [string, string | null][];
     maxTimestampToAnswer: string;
   } | null;
+  questionCounter: number;
 }
 
 export class Game {
@@ -32,6 +34,7 @@ export class Game {
     playerAnswer: Map<string, string | null>;
     maxTimestampToAnswer: Date;
   } | null;
+  private questionCounter: number;
 
   constructor(
     quizId: string,
@@ -44,9 +47,10 @@ export class Game {
     this.player1 = { score: 0, userId: firstPlayerId };
     this.player2 = { score: 0, userId: secondPlayerId };
     this.currentQuestion = null;
+    this.questionCounter = 0;
   }
 
-  getQuestion() {
+  getQuestion(addBuffer = false) {
     const question = this.questions.shift();
 
     if (question) {
@@ -54,9 +58,15 @@ export class Game {
         question,
         playerAnswer: new Map(),
         maxTimestampToAnswer: dayjs()
-          .add(settings.SECONDS_ALLOWED_TO_ANSWER, "seconds")
+          .add(
+            addBuffer
+              ? settings.SECONDS_ALLOWED_TO_ANSWER + INTRO_IN_SECONDS
+              : settings.SECONDS_ALLOWED_TO_ANSWER,
+            "seconds"
+          )
           .toDate(),
       };
+      this.questionCounter++;
       return this.mapQuestionDto(question);
     }
 
@@ -199,6 +209,7 @@ export class Game {
       content: question.content,
       id: question.id,
       answers: question.answers.map(({ id, content }) => ({ id, content })),
+      questionNumber: this.questionCounter,
     };
   }
 
@@ -208,6 +219,7 @@ export class Game {
       player1: this.player1,
       player2: this.player2,
       questions: this.questions,
+      questionCounter: this.questionCounter,
       currentQuestion: !this.currentQuestion
         ? null
         : {
@@ -227,6 +239,7 @@ export class Game {
     );
     game.player1.score = parsedJson.player1.score;
     game.player2.score = parsedJson.player2.score;
+    game.questionCounter = parsedJson.questionCounter;
     game.currentQuestion = !parsedJson.currentQuestion
       ? null
       : {
