@@ -12,6 +12,9 @@ import { KEY_GENERATOR } from "./lib/const";
 import { dao } from "lib/dao";
 import { Game } from "model/Game";
 import { ApiError } from "model/ApiError";
+import { Mutex } from "async-mutex";
+
+const answerLocks = new Map<string, Mutex>();
 
 export async function webSocketHandler(
   io: Server<ClientToServerEvents, ServerToClientEvents, DefaultEventsMap, any>
@@ -117,6 +120,7 @@ async function joinQuiz(
       );
       await socket.join(roomId);
       await waitingPlayerSocket.join(roomId);
+      answerLocks.set(roomId, new Mutex());
 
       await setSocketInfo(waitingPlayerSocket.id, {
         ...waitingPlayerSocketInfo,
@@ -189,56 +193,65 @@ async function sendAnswer(
       throw new Error("not in a game");
     }
 
-    const game = await getGameOrThrow(socketInfo.joinedRoom);
+    await answerLocks.get(socketInfo.joinedRoom)?.runExclusive(async () => {
+      if (!socketInfo.joinedRoom) {
+        throw new Error("not in a game");
+      }
 
-    const { correctAnswerId, isAnsweredInTime } = game.answerQuestion(
-      socketInfo.userData.userId,
-      validatedId
-    );
+      const game = await getGameOrThrow(socketInfo.joinedRoom);
 
-    if (isAnsweredInTime && validatedId) {
-      io.to(socketInfo.joinedRoom).emit("playerAnswered", {
-        playerId: socketInfo.userData.userId,
+      const { correctAnswerId, isAnsweredInTime } = game.answerQuestion(
+        socketInfo.userData.userId,
+        validatedId
+      );
+
+      if (isAnsweredInTime && validatedId) {
+        io.to(socketInfo.joinedRoom).emit("playerAnswered", {
+          playerId: socketInfo.userData.userId,
+        });
+      }
+
+      if (!game.isBothPlayersAnswered()) {
+        await saveGame(game, socketInfo.joinedRoom);
+        return;
+      }
+
+      io.to(socketInfo.joinedRoom).emit("sendCorrectAnswer", {
+        correctAnswerId,
+        ...game.getCurrentScore(),
       });
-    }
 
-    if (!game.isBothPlayersAnswered()) {
-      await saveGame(game, socketInfo.joinedRoom);
-      return;
-    }
+      const question = game.getQuestion();
+      if (question) {
+        io.to(socketInfo.joinedRoom).emit("sendQuestion", question);
+        await saveGame(game, socketInfo.joinedRoom);
+        return;
+      }
 
-    io.to(socketInfo.joinedRoom).emit("sendCorrectAnswer", {
-      correctAnswerId,
-      ...game.getCurrentScore(),
+      io.to(socketInfo.joinedRoom).emit(
+        "gameFinished",
+        game.getFinishedGameResults()
+      );
+
+      const room = io.sockets.adapter.rooms.get(socketInfo.joinedRoom);
+
+      if (!room) {
+        throw new Error("invalid room");
+      }
+
+      for (let socketId of room) {
+        const socketInRoomInfo = await getSocketInfoOrThrow(socketId);
+        await setSocketInfo(socketId, {
+          ...socketInRoomInfo,
+          joinedRoom: null,
+        });
+        await io.sockets.sockets.get(socketId)?.leave(socketInfo.joinedRoom);
+      }
+
+      await redis.del(socketInfo.joinedRoom);
+
+      await dao.createGameAndResults(game.getCreateGameAndResultsDto());
     });
-
-    const question = game.getQuestion();
-    if (question) {
-      io.to(socketInfo.joinedRoom).emit("sendQuestion", question);
-      await saveGame(game, socketInfo.joinedRoom);
-      return;
-    }
-
-    io.to(socketInfo.joinedRoom).emit(
-      "gameFinished",
-      game.getFinishedGameResults()
-    );
-
-    const room = io.sockets.adapter.rooms.get(socketInfo.joinedRoom);
-
-    if (!room) {
-      throw new Error("invalid room");
-    }
-
-    for (let socketId of room) {
-      const socketInRoomInfo = await getSocketInfoOrThrow(socketId);
-      await setSocketInfo(socketId, { ...socketInRoomInfo, joinedRoom: null });
-      await io.sockets.sockets.get(socketId)?.leave(socketInfo.joinedRoom);
-    }
-
-    await redis.del(socketInfo.joinedRoom);
-
-    await dao.createGameAndResults(game.getCreateGameAndResultsDto());
   } catch (error) {
     exceptionHandler(socket, error);
   }

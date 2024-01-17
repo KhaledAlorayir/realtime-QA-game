@@ -27,4 +27,4 @@ export enum CATEGORY {
   ANIMALS = "animals",
 }
 
-export const INTRO_IN_SECONDS = 3;
+export const BUFFER_IN_SECONDS = 5;

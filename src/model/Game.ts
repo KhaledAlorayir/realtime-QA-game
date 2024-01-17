@@ -9,7 +9,7 @@ import {
 import dayjs from "dayjs";
 import { settings } from "lib/settings";
 import isSameOrBefore from "dayjs/plugin/isSameOrBefore";
-import { INTRO_IN_SECONDS } from "lib/const";
+import { BUFFER_IN_SECONDS } from "lib/const";
 dayjs.extend(isSameOrBefore);
 interface DeserializedGame {
   quizId: string;
@@ -60,7 +60,7 @@ export class Game {
         maxTimestampToAnswer: dayjs()
           .add(
             addBuffer
-              ? settings.SECONDS_ALLOWED_TO_ANSWER + INTRO_IN_SECONDS
+              ? settings.SECONDS_ALLOWED_TO_ANSWER + BUFFER_IN_SECONDS
               : settings.SECONDS_ALLOWED_TO_ANSWER,
             "seconds"
           )
