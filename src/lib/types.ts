@@ -44,6 +44,7 @@ export interface SendQuestionBody {
   content: string;
   questionNumber: number;
   answers: Omit<AnswerDto, "isCorrect">[];
+  isFirst: boolean;
 }
 
 export interface QuizJoinedBody {
@@ -86,7 +87,6 @@ export interface ServerToClientEvents {
 export interface ClientToServerEvents {
   joinQuiz: (body: { quizId: string }) => void;
   sendAnswer: (body: { answerId: string | null }) => void;
-  leaveWaitingList: () => void;
 }
 
 export interface UserData {

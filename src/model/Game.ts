@@ -50,7 +50,7 @@ export class Game {
     this.questionCounter = 0;
   }
 
-  getQuestion(addBuffer = false) {
+  getQuestion() {
     const question = this.questions.shift();
 
     if (question) {
@@ -59,9 +59,7 @@ export class Game {
         playerAnswer: new Map(),
         maxTimestampToAnswer: dayjs()
           .add(
-            addBuffer
-              ? settings.SECONDS_ALLOWED_TO_ANSWER + BUFFER_IN_SECONDS
-              : settings.SECONDS_ALLOWED_TO_ANSWER,
+            settings.SECONDS_ALLOWED_TO_ANSWER + BUFFER_IN_SECONDS,
             "seconds"
           )
           .toDate(),
@@ -204,7 +202,9 @@ export class Game {
     throw new Error("invalid player id");
   }
 
-  private mapQuestionDto(question: QuestionWithAnswers): SendQuestionBody {
+  private mapQuestionDto(
+    question: QuestionWithAnswers
+  ): Omit<SendQuestionBody, "isFirst"> {
     return {
       content: question.content,
       id: question.id,

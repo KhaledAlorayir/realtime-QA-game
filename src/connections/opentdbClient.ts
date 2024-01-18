@@ -67,6 +67,7 @@ function mapToCreateQuiz(
     quizName,
     questions: questions.map((q) => ({
       content: q.question,
+      // this should be shuffled ;)
       answers: [
         ...q.incorrect_answers.map((a) => ({ content: a, isCorrect: false })),
         { content: q.correct_answer, isCorrect: true },

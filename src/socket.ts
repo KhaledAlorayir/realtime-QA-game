@@ -44,10 +44,6 @@ export async function webSocketHandler(
         sendAnswer(socket, io, body.answerId);
       });
 
-      socket.on("leaveWaitingList", () => {
-        leaveWaitingList(socket, io);
-      });
-
       socket.on("disconnect", () => {
         cleanup(socket, io);
       });
@@ -175,12 +171,13 @@ async function joinQuiz(
         quiz.questions
       );
 
-      const question = game.getQuestion(true);
+      const question = game.getQuestion();
 
-      if (question) {
-        io.to(roomId).emit("sendQuestion", question);
+      if (!question) {
+        throw new Error("an error has occurred");
       }
 
+      io.to(roomId).emit("sendQuestion", { ...question, isFirst: true });
       await saveGame(game, roomId);
     }
   } catch (error) {
@@ -218,13 +215,13 @@ async function sendAnswer(
         validatedId
       );
 
-      if (isAnsweredInTime && validatedId) {
-        io.to(socketInfo.joinedRoom).emit("playerAnswered", {
-          playerId: socketInfo.userData.userId,
-        });
-      }
-
       if (!game.isBothPlayersAnswered()) {
+        if (isAnsweredInTime && validatedId) {
+          io.to(socketInfo.joinedRoom).emit("playerAnswered", {
+            playerId: socketInfo.userData.userId,
+          });
+        }
+
         await saveGame(game, socketInfo.joinedRoom);
         return;
       }
@@ -236,7 +233,10 @@ async function sendAnswer(
 
       const question = game.getQuestion();
       if (question) {
-        io.to(socketInfo.joinedRoom).emit("sendQuestion", question);
+        io.to(socketInfo.joinedRoom).emit("sendQuestion", {
+          ...question,
+          isFirst: false,
+        });
         await saveGame(game, socketInfo.joinedRoom);
         return;
       }
@@ -270,27 +270,6 @@ async function sendAnswer(
   }
 }
 
-async function leaveWaitingList(
-  socket: Socket<
-    ClientToServerEvents,
-    ServerToClientEvents,
-    DefaultEventsMap,
-    any
-  >,
-  io: Server<ClientToServerEvents, ServerToClientEvents, DefaultEventsMap, any>
-) {
-  try {
-    const socketInfo = await getSocketInfoOrThrow(socket.id);
-
-    if (!socketInfo.waitingOnQuizId) {
-      throw new Error("not in waiting list");
-    }
-    await removeSocketFromWaitingList(socket.id, socketInfo.waitingOnQuizId);
-  } catch (error) {
-    exceptionHandler(socket, error);
-  }
-}
-
 async function cleanup(
   socket: Socket<
     ClientToServerEvents,
@@ -306,9 +285,10 @@ async function cleanup(
       await redis.del(KEY_GENERATOR.activeUser(socketInfo.userData.userId));
       await redis.del(KEY_GENERATOR.socketInfo(socket.id));
       if (socketInfo.waitingOnQuizId) {
-        await removeSocketFromWaitingList(
-          socket.id,
-          socketInfo.waitingOnQuizId
+        redis.lRem(
+          KEY_GENERATOR.waitingPlayersList(socketInfo.waitingOnQuizId),
+          0,
+          socket.id
         );
       }
 
@@ -383,10 +363,6 @@ async function getGameOrThrow(roomId: string) {
 
 async function saveGame(game: Game, roomId: string) {
   await redis.set(roomId, game.toString());
-}
-
-function removeSocketFromWaitingList(socketId: string, quizId: string) {
-  return redis.lRem(KEY_GENERATOR.waitingPlayersList(quizId), 0, socketId);
 }
 
 function exceptionHandler(
