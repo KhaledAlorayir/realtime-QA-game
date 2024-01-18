@@ -14,6 +14,19 @@ import { Game } from "model/Game";
 import { ApiError } from "model/ApiError";
 import { Mutex } from "async-mutex";
 
+/*
+  I introduced a locking mechanism to solve a race conation,
+  sometimes when both players answer at the same exact time, the will both load the same game instance from redis,
+  so when i check if both players answered to send the next question it won't occur for either of them since they both loaded the instance together,
+  not one after the other so an answer would be recorded.
+
+  of course we have a mutex for each game to block only between the two players,
+  
+  a different approach of this, is instead of going with a mutex map, is to go with a roomGame map, so i changed the implantation of 'saveGame' and 'getGameOrThrow' functions
+  to read and write to a roomGame map instead of redis, this will also solve the problem because we are muting a single instance of a 'Game' instead of serializing & storing to redis then parsing & creating a new instance.
+
+  cool stuff, programming is pretty cool!.
+*/
 const answerLocks = new Map<string, Mutex>();
 
 export async function webSocketHandler(
