@@ -177,7 +177,10 @@ async function joinQuiz(
         throw new Error("an error has occurred");
       }
 
-      io.to(roomId).emit("sendQuestion", { ...question, isFirst: true });
+      io.to(roomId).emit("sendQuestion", {
+        ...question,
+        uiStatusIndicator: "FIRST_QUESTION",
+      });
       await saveGame(game, roomId);
     }
   } catch (error) {
@@ -235,7 +238,9 @@ async function sendAnswer(
       if (question) {
         io.to(socketInfo.joinedRoom).emit("sendQuestion", {
           ...question,
-          isFirst: false,
+          uiStatusIndicator: !!validatedId
+            ? "NEXT_QUESTION"
+            : "PREVIOUS_NOT_ANSWERED",
         });
         await saveGame(game, socketInfo.joinedRoom);
         return;

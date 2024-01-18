@@ -5,12 +5,12 @@ import { dao } from "lib/dao";
 async function generateQuizzes() {
   const quiz = await openTdbClient.getTrivia({
     amount: 50,
-    category: openTdbClient.API_CATEGORY.MUSIC,
+    category: openTdbClient.API_CATEGORY.VIDEO_GAMES,
   });
-  const category = CATEGORY.MUSIC;
+  const category = CATEGORY.VIDEO_GAMES;
 
   if (quiz) {
-    const chunkSize = 10;
+    const chunkSize = 3;
     const chunks = [
       quiz.results.splice(0, chunkSize),
       quiz.results.splice(0, chunkSize),

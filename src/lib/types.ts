@@ -44,7 +44,10 @@ export interface SendQuestionBody {
   content: string;
   questionNumber: number;
   answers: Omit<AnswerDto, "isCorrect">[];
-  isFirst: boolean;
+  uiStatusIndicator:
+    | "FIRST_QUESTION"
+    | "NEXT_QUESTION"
+    | "PREVIOUS_NOT_ANSWERED";
 }
 
 export interface QuizJoinedBody {

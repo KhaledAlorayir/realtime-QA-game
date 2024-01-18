@@ -1,4 +1,5 @@
 import { CreateQuizWithQuestionsAndAnswers } from "lib/types";
+import shuffle from "lodash.shuffle";
 
 const basePath = "https://opentdb.com/api.php";
 
@@ -67,11 +68,10 @@ function mapToCreateQuiz(
     quizName,
     questions: questions.map((q) => ({
       content: q.question,
-      // this should be shuffled ;)
-      answers: [
+      answers: shuffle([
         ...q.incorrect_answers.map((a) => ({ content: a, isCorrect: false })),
         { content: q.correct_answer, isCorrect: true },
-      ],
+      ]),
     })),
   };
 }

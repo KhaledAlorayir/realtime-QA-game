@@ -204,7 +204,7 @@ export class Game {
 
   private mapQuestionDto(
     question: QuestionWithAnswers
-  ): Omit<SendQuestionBody, "isFirst"> {
+  ): Omit<SendQuestionBody, "isFirst" | "uiStatusIndicator"> {
     return {
       content: question.content,
       id: question.id,
